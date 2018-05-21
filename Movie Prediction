@@ -1,0 +1,42 @@
+movies = read.csv("E:\\Data Science\\Machine Learning\\movies\\movies.csv")
+ratings = read.csv("E:\\Data Science\\Machine Learning\\movies\\ratings.csv")
+library(knitr)
+kable(head(movies))
+kable(head(ratings))
+length(unique(ratings$movieId))
+library(reshape2)
+rating_matrix = dcast(ratings,userId~movieId, value.var = 'rating')
+
+dim(rating_matrix)
+cor(t(rating_matrix[1:2,]))
+
+library(LSAfun)
+cosine(t(rating_matrix[1:2,]))
+View(rating_matrix[1:5,1:10])
+View(rating_matrix[1:15,1:15])
+library(recommenderlab)
+rank_matrix = as(as.matrix(rating_matrix[,-1]),'realRatingMatrix')
+rank_matrix
+
+model = Recommender(rank_matrix,method = "UBCF",param = list(method="Cosine",nn=30))
+#nn --> no. of neighbours to check
+summary(model)
+
+#Predict for 1st User:
+result = predict(model,rank_matrix[1,],n=10)#1st row vs all columns, top 10 movies
+as(result,'list') #predicted Movie IDs for User1
+
+#Predicting the title of the movie for a User
+```{r}
+movies_rec = as.numeric(as(result,'list')[[1]])
+movies %>% filter(movieId %in% movies_rec) %>% select(title)
+
+#Creating a function for predicting movies for every User
+```{r}
+recommend_movies = function(model,userid){
+  result = predict(model,rank_matrix[userid,],n=10)
+  movies_rec = as.numeric(as(result,'list')[[1]])
+  return_movies = movies %>% filter(movieId %in% movies_rec) %>% select(title)
+  return(return_movies)
+}
+recommend_movies(model,90)
